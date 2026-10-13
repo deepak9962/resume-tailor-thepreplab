@@ -51,7 +51,7 @@ describe('generateCoverLetter', () => {
     expect(create).toHaveBeenCalledTimes(1)
   })
 
-  it('includes the optional inputs in the prompt', async () => {
+  it('includes the optional inputs in fenced prompt blocks', async () => {
     create.mockResolvedValueOnce({ output_text: JSON.stringify(fullResult) })
 
     await generateCoverLetter(context, {
@@ -61,9 +61,16 @@ describe('generateCoverLetter', () => {
       tone: 'warm',
     })
 
-    const input = create.mock.calls[0]?.[0]?.input as string
-    expect(input).toContain('COMPANY_NAME: Acme')
-    expect(input).toContain('ROLE_TITLE: Backend Engineer')
+    const args = create.mock.calls[0]?.[0]
+    const input = args?.input as string
+    const system = args?.system_instruction as string
+
+    expect(system).toContain('SECURITY - UNTRUSTED INPUT')
+    expect(input).toContain('CANDIDATE_NOTES')
+    expect(input).toContain('COMPANY_NAME')
+    expect(input).toContain('ROLE_TITLE')
+    expect(input).toContain('Acme')
+    expect(input).toContain('Backend Engineer')
     expect(input).toContain('I can relocate.')
     expect(input).toContain('TONE: warm')
   })

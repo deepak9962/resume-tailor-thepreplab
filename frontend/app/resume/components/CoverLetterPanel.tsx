@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useSyncExternalStore, useState } from 'react'
-import { generateCoverLetter } from '@/app/resume-tailor/api'
+import { COVER_LETTER_LIMITS, generateCoverLetter } from '@/app/resume-tailor/api'
 import { DownloadButton } from '@/app/resume-tailor/components/DownloadButton'
 import { ErrorBanner } from '@/app/resume-tailor/components/ErrorBanner'
 import { GeneratingFeedback } from '@/app/resume-tailor/components/GeneratingFeedback'
@@ -120,6 +120,7 @@ export const CoverLetterPanel = ({ token, resume }: CoverLetterPanelProps) => {
                 value={companyName}
                 onChange={(event) => setCompanyName(event.target.value)}
                 placeholder="Inferred from the job description"
+                maxLength={COVER_LETTER_LIMITS.companyName}
                 disabled={isGenerating}
                 className={fieldClassName}
               />
@@ -135,6 +136,7 @@ export const CoverLetterPanel = ({ token, resume }: CoverLetterPanelProps) => {
                 value={roleTitle}
                 onChange={(event) => setRoleTitle(event.target.value)}
                 placeholder="Inferred from the job description"
+                maxLength={COVER_LETTER_LIMITS.roleTitle}
                 disabled={isGenerating}
                 className={fieldClassName}
               />
@@ -169,10 +171,15 @@ export const CoverLetterPanel = ({ token, resume }: CoverLetterPanelProps) => {
               value={candidateNotes}
               onChange={(event) => setCandidateNotes(event.target.value)}
               rows={3}
+              maxLength={COVER_LETTER_LIMITS.candidateNotes}
               placeholder="Extra true facts only, for example: I can relocate, or I use Claude Code daily."
               disabled={isGenerating}
               className={`${fieldClassName} resize-y`}
             />
+            <p className="self-end text-xs text-slate-400">
+              {candidateNotes.trim().length.toLocaleString('en-US')} /{' '}
+              {COVER_LETTER_LIMITS.candidateNotes.toLocaleString('en-US')}
+            </p>
           </div>
 
           <div className="flex flex-col gap-4 border-t border-slate-100 pt-5">

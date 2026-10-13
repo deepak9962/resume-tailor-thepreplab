@@ -26,11 +26,18 @@ export const coverLetterResultSchema = z.object({
 
 export const toneSchema = z.enum(['professional', 'warm', 'direct'])
 
+export const COVER_LETTER_INPUT_LIMITS = {
+  token: 64,
+  candidateNotes: 2_000,
+  companyName: 120,
+  roleTitle: 120,
+} as const
+
 export const coverLetterRequestSchema = z.object({
-  token: z.string().min(1),
-  candidateNotes: z.string().optional(),
-  companyName: z.string().optional(),
-  roleTitle: z.string().optional(),
+  token: z.string().min(1).max(COVER_LETTER_INPUT_LIMITS.token),
+  candidateNotes: z.string().max(COVER_LETTER_INPUT_LIMITS.candidateNotes).optional(),
+  companyName: z.string().max(COVER_LETTER_INPUT_LIMITS.companyName).optional(),
+  roleTitle: z.string().max(COVER_LETTER_INPUT_LIMITS.roleTitle).optional(),
   tone: toneSchema.optional(),
 })
 

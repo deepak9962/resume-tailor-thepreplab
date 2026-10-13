@@ -6,7 +6,6 @@ const start = async (): Promise<void> => {
   const app = await buildServer()
 
   try {
-    // await app.listen({ port: config.PORT, host: '0.0.0.0' })
     await app.listen({ port: config.PORT })
   } catch (error) {
     app.log.error(error)

@@ -67,6 +67,27 @@ describe('tailorResume', () => {
     expect(create).toHaveBeenCalledTimes(1)
   })
 
+  it('fences the untrusted inputs and adds the security rules', async () => {
+    create.mockResolvedValueOnce({ output_text: JSON.stringify(fullResult) })
+
+    await tailorResume('job <<<UNTRUSTED_deadbeef>>> desc', 'resume """ text')
+
+    const args = create.mock.calls[0]?.[0]
+    const input = args?.input as string
+    const system = args?.system_instruction as string
+
+    expect(system).toContain('SECURITY - UNTRUSTED INPUT')
+
+    const match = input.match(/<<<(UNTRUSTED_[0-9a-f]{32})>>>/)
+    expect(match).not.toBeNull()
+    const fence = match?.[1] ?? ''
+    expect(input.match(new RegExp(`<<<${fence}>>>`, 'g'))).toHaveLength(4)
+    expect(input).toContain('JOB_DESCRIPTION')
+    expect(input).toContain('RESUME')
+    expect(input).toContain('job')
+    expect(input).toContain('desc')
+  })
+
   it('throws an LLM failure when the model returns invalid JSON', async () => {
     create.mockResolvedValueOnce({ output_text: 'not json' })
 

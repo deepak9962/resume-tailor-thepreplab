@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  COVER_LETTER_INPUT_LIMITS,
   coverLetterRequestSchema,
   coverLetterResultSchema,
 } from './coverLetter.js'
@@ -64,5 +65,29 @@ describe('coverLetterRequestSchema', () => {
 
   it('rejects a missing token', () => {
     expect(coverLetterRequestSchema.safeParse({ tone: 'warm' }).success).toBe(false)
+  })
+
+  it('rejects optional inputs beyond the length limits', () => {
+    const tooLong = (length: number) => 'x'.repeat(length)
+    expect(
+      coverLetterRequestSchema.safeParse({ token: 'abc', companyName: tooLong(121) }).success,
+    ).toBe(false)
+    expect(
+      coverLetterRequestSchema.safeParse({ token: 'abc', roleTitle: tooLong(121) }).success,
+    ).toBe(false)
+    expect(
+      coverLetterRequestSchema.safeParse({ token: 'abc', candidateNotes: tooLong(2_001) }).success,
+    ).toBe(false)
+  })
+
+  it('accepts inputs exactly at the length limits', () => {
+    const atLimit = (length: number) => 'x'.repeat(length)
+    const parsed = coverLetterRequestSchema.safeParse({
+      token: atLimit(COVER_LETTER_INPUT_LIMITS.token),
+      companyName: atLimit(COVER_LETTER_INPUT_LIMITS.companyName),
+      roleTitle: atLimit(COVER_LETTER_INPUT_LIMITS.roleTitle),
+      candidateNotes: atLimit(COVER_LETTER_INPUT_LIMITS.candidateNotes),
+    })
+    expect(parsed.success).toBe(true)
   })
 })

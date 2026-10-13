@@ -76,7 +76,7 @@ Committed `.env.example` documents it; `.env.local` is git-ignored. Never put se
 - Centered layout. A textarea for the full JD and, in the center of the screen, a file upload area supporting both click-to-select and drag-and-drop.
 - After a file is selected, show its name and a human-readable size.
 - A primary "Tailor Resume" button. Pressing Enter in the JD textarea also submits.
-- The button is disabled until the JD meets `MIN_JD_LENGTH` and a valid file is selected.
+- The button is disabled until the JD is within `MIN_JD_LENGTH`–`MAX_JD_LENGTH` and a valid file is selected.
 - While the request is in flight, show a full-page loading overlay (`FullPageLoader`) built on `GeneratingFeedback`: a spinner, a message that advances with elapsed time, a running seconds counter and a decorative progress bar. The AI call can take up to a minute, so the copy must not promise "a few seconds" as an upper bound.
 - On success, save the response to `sessionStorage` and navigate to `/resume`, which shows the tailored resume in a paper-style read-only preview plus a match card, and a Download button pointing at `GET /download/:token`.
 - `/resume` has a **Resume | Cover letter** segmented control. The cover letter tab collects optional company, role, tone and notes, then calls `POST /cover-letter` on demand using the resume token; the result is saved to `sessionStorage` and shown with its own Download button.
@@ -98,13 +98,15 @@ idle -> processing -> (navigate to /resume)
 
 ## 7. Validation (client-side, mirrors the backend)
 
-- JD: trimmed length `>= 100` characters. Show inline helper/error text.
+- JD: trimmed length `>= MIN_JD_LENGTH` (100) and `<= MAX_JD_LENGTH` (6000). Show inline helper/error text and `aria-invalid`; the submit button stays disabled when out of range.
+- Cover letter optional fields: `companyName`/`roleTitle` cap at 120 and `candidateNotes` at 2000 (`COVER_LETTER_LIMITS`), enforced with `maxLength` (a counter shows the notes usage).
 - File: accept `.pdf,.docx`, reject others; max 5 MB. Validate again before submit.
 - Client checks are UX only — the backend is the source of truth. Never rely on them for security.
 
 ## 8. Backend integration (`api.ts`)
 
 - `tailorResume(jobDescription, file)` builds `FormData` and `POST`s to `${NEXT_PUBLIC_API_URL}/resume-tailor`.
+- Client-side bounds mirror the backend (`MIN_JD_LENGTH`/`MAX_JD_LENGTH`, `COVER_LETTER_LIMITS` in `api.ts`); keep them in sync when the backend limits change.
 - Parse the backend error shape `{ error: { code, message } }` and turn it into a user-safe message.
 - Handle timeouts and network failures distinctly from validation errors; both surface through `ErrorBanner`.
 - Requests are bounded client-side: `api.ts` aborts after `REQUEST_TIMEOUT_MS` (180s) via an `AbortController` so a hung call degrades to a clear "taking longer than expected" message instead of spinning forever. Keep this comfortably above the backend's worst case (~60s timeout + one retry).

@@ -36,6 +36,7 @@ backend/
       gemini.ts               # shared GoogleGenAI client + transient-retry helper
       tailor.ts               # resume prompt + Gemini structured-output call
       coverLetter.ts          # cover letter prompt + Gemini structured-output call
+      promptSafety.ts         # untrusted-input fencing (random nonce) + shared anti-injection rules
       ats.ts                  # deterministic ATS score: content checks + PDF parseability
       generatePdf.ts          # tailored JSON -> resume PDF Buffer
       generateCoverLetterPdf.ts # cover letter JSON -> PDF Buffer
@@ -70,6 +71,8 @@ All config is read once in `src/lib/config.ts` and validated at startup. Never r
 | `PORT`              | no       | `3001`  |                                         |
 | `MAX_FILE_SIZE_MB`  | no       | `5`     | Hard cap for resume uploads.            |
 | `MIN_JD_LENGTH`     | no       | `100`   | Minimum characters for a valid JD.      |
+| `MAX_JD_LENGTH`     | no       | `6000`  | Hard cap for the JD; longer is rejected with `400`. |
+| `MAX_RESUME_TEXT_LENGTH` | no  | `20000` | Extracted resume text is truncated to this length (with a logged warning). |
 | `CORS_ORIGIN`       | no       | `http://localhost:3000` | Frontend origin.        |
 | `DOWNLOAD_TTL_MS`   | no       | `300000`| 5 minutes.                              |
 | `GEMINI_MODEL`      | no       | `gemini-3.8-flash` | Must be a Gemini 3 model (2.5 is limited to legacy users). |
@@ -82,7 +85,7 @@ The process must exit with a clear message if `GEMINI_API_KEY` is missing. `.env
 
 - `multipart/form-data`.
 - Fields:
-  - `jobDescription` — string, trimmed, `>= MIN_JD_LENGTH`.
+  - `jobDescription` — string, trimmed, `>= MIN_JD_LENGTH` and `<= MAX_JD_LENGTH`.
   - `resume` — single file, PDF or DOCX, `<= MAX_FILE_SIZE_MB`.
 
 Response `200`:
@@ -125,7 +128,7 @@ Response `200`:
 
 ### `POST /cover-letter`
 
-- `application/json` body: `{ token, candidateNotes?, companyName?, roleTitle?, tone? }`. `tone` is `professional` (default), `warm` or `direct`.
+- `application/json` body: `{ token, candidateNotes?, companyName?, roleTitle?, tone? }`. `tone` is `professional` (default), `warm` or `direct`. Free-text fields are length-capped (`token` 64, `companyName`/`roleTitle` 120, `candidateNotes` 2000) in `COVER_LETTER_INPUT_LIMITS`; anything longer is a `400`.
 - `token` is the one returned by `POST /resume-tailor`; the JD, extracted resume text and parsed resume are read back from it (no re-upload).
 - Generates the cover letter, renders it to a PDF, and stores it under a new token.
 - Response `200`:
@@ -170,7 +173,7 @@ Response `200`:
 1. Validate multipart fields and file presence.
 2. Validate file type (MIME + extension + magic bytes) and size.
 3. Extract plain text from the resume (`extractText`).
-4. Guard content length: JD `>= MIN_JD_LENGTH`, extracted resume text non-empty and under a sane token budget (truncate with a logged warning, never silently drop the JD).
+4. Guard content length: JD `>= MIN_JD_LENGTH` and `<= MAX_JD_LENGTH` (reject with `400`); truncate extracted resume text over `MAX_RESUME_TEXT_LENGTH` with a logged warning. Never silently drop or alter the JD.
 5. Call the LLM (`tailor`) with JD + resume text.
 6. Parse and validate the model output against the `tailorResult` zod schema. On parse failure, fail the request — do not pass malformed data downstream.
 7. Generate the PDF (`generatePdf`).
@@ -182,7 +185,7 @@ Response `200`:
 - Accepted types: `application/pdf`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`.
 - Always verify magic bytes in addition to the declared MIME type: PDF starts with `%PDF-`, DOCX (zip) with `PK\x03\x04`.
 - Enforce the size limit in the `@fastify/multipart` config AND re-check the buffered length.
-- Reject empty/whitespace-only JD and resumes with no extractable text.
+- Reject empty/whitespace-only JD and resumes with no extractable text, and reject a JD longer than `MAX_JD_LENGTH`.
 - Error codes: `400` invalid input, `413` too large, `415` unsupported type.
 
 ## 8. LLM usage
@@ -192,6 +195,7 @@ Response `200`:
 - The model must return a `customizedResume` (truthful rewrite of summary, grouped skills, impact-first experience bullets, projects, education) and an `analysis` (`matchScore`, `matchedKeywords`, `missingKeywords`, `gaps`, `changesSummary`). The response contract uses camelCase; the JSON schema in `schemas/tailorResult.ts` is the single source of truth and the prompt's schema text must be kept in sync with it. Bullet strings may contain Markdown `**bold**` spans around the key metric/technology (1 to 3 per bullet); the PDF renderer and the frontend both parse them.
 - The cover letter prompt (`schemas/coverLetter.ts`, camelCase: `coverLetter { greeting, opening, bullets, closing, signOff }` + `analysis { jdPriorities, evidenceUsed, unsupportedRequirements }`) enforces the same truthfulness rules: only resume facts plus the optional `candidateNotes`, no invented company facts, no mention of unsupported requirements. An all-empty opening/closing is treated as a model failure.
 - Keep the prompt's truthfulness rules intact: never invent employers, dates, metrics or skills; never add a JD skill the resume does not show (list it under `gaps`/`missingKeywords` instead).
+- Treat every untrusted field as data, not instructions. `promptSafety.ts` strips control characters and wraps each field (JD, resume, notes, company, role) in a per-request random nonce fence (`<<<UNTRUSTED_...>>>`); each system instruction ends with the shared `UNTRUSTED_RULES` telling the model to ignore any instructions found inside the fence and never reveal the system message. Never interpolate untrusted text into a prompt without `wrapUntrusted`.
 - The model cannot emit the prompt's `{ error }` variants under a strict `responseSchema`. Deterministic checks (JD length, empty extraction) live in code, and `tailor.ts` adds a not-a-resume guard: an all-empty `customizedResume` becomes a `400`.
 - Set a request timeout and retry at most once on transient errors (HTTP 429 or 5xx, classified from the provider `ApiError.status` with a message fallback).
 - Never log the API key or raw provider errors to the client. Attach the original provider error as `cause` on the `502` and log that `cause` server-side only.
@@ -241,7 +245,7 @@ Response `200`:
 - Validate all external input (HTTP and LLM output) before use.
 - No secrets or PII in logs.
 - Keep dependencies minimal; justify any new runtime dependency in the PR/commit message.
-- Tests: add unit tests for `extractText`, `tailor` (mocked), `generatePdf`, `scoreAts`, and `tokenStore` expiry. Integration-test the route with `fastify.inject`.
+- Tests: add unit tests for `extractText`, `tailor` (mocked), `promptSafety`, `generatePdf`, `scoreAts`, and `tokenStore` expiry. Integration-test the route with `fastify.inject`.
 
 ## 13. Scripts
 

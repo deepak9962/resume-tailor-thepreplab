@@ -6,6 +6,7 @@ import {
   type TailorResult,
 } from '../schemas/tailorResult.js'
 import { ai, withRetry } from './gemini.js'
+import { createFence, UNTRUSTED_RULES, wrapUntrusted } from './promptSafety.js'
 
 const SYSTEM_INSTRUCTION = `You are an expert resume editor and technical recruiter. You tailor a candidate's existing resume to a specific job description (JD) so it reads as strongly as possible while staying 100% truthful.
 
@@ -67,10 +68,17 @@ Return ONLY valid JSON. No markdown fences and no text before or after it. The o
     "gaps": [{ "gap": string, "note": string }],
     "changesSummary": [string]
   }
-}`
+}
 
-const buildPrompt = (jobDescription: string, resumeText: string): string =>
-  `JOB_DESCRIPTION:\n"""\n${jobDescription}\n"""\n\nRESUME:\n"""\n${resumeText}\n"""`
+${UNTRUSTED_RULES}`
+
+const buildPrompt = (jobDescription: string, resumeText: string): string => {
+  const fence = createFence()
+  return [
+    wrapUntrusted('JOB_DESCRIPTION', jobDescription, fence),
+    wrapUntrusted('RESUME', resumeText, fence),
+  ].join('\n\n')
+}
 
 const isEmptyResume = (result: TailorResult): boolean => {
   const { customizedResume } = result

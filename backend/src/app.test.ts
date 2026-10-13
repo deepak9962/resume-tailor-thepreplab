@@ -31,6 +31,28 @@ describe('server', () => {
     })
   })
 
+  it('rejects a job description over the maximum length', async () => {
+    const app = await buildServer()
+    apps.push(app)
+
+    const boundary = '----resumetailortest'
+    const body =
+      `--${boundary}\r\n` +
+      'Content-Disposition: form-data; name="jobDescription"\r\n\r\n' +
+      `${'a'.repeat(6_001)}\r\n` +
+      `--${boundary}--\r\n`
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/resume-tailor',
+      headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+      payload: body,
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toMatchObject({ error: { code: 'BAD_REQUEST' } })
+  })
+
   it('rejects a cover letter request without a token', async () => {
     const app = await buildServer()
     apps.push(app)

@@ -35,12 +35,26 @@ export const resumeTailorRoutes: FastifyPluginAsync = async (app) => {
         `Please paste a job description of at least ${config.MIN_JD_LENGTH} characters.`,
       )
     }
+    if (trimmedJd.length > config.MAX_JD_LENGTH) {
+      throw badRequest(
+        `Please shorten the job description to ${config.MAX_JD_LENGTH.toLocaleString('en-US')} characters or fewer.`,
+      )
+    }
 
     if (!resumeBuffer || resumeBuffer.length === 0) {
       throw badRequest('A resume file (PDF or DOCX) is required.')
     }
 
-    const resumeText = await extractText(resumeBuffer)
+    const extracted = await extractText(resumeBuffer)
+    let resumeText = extracted
+    if (resumeText.length > config.MAX_RESUME_TEXT_LENGTH) {
+      request.log.warn(
+        { length: resumeText.length, limit: config.MAX_RESUME_TEXT_LENGTH },
+        'Truncating extracted resume text to the configured maximum',
+      )
+      resumeText = resumeText.slice(0, config.MAX_RESUME_TEXT_LENGTH)
+    }
+
     const result = await tailorResume(trimmedJd, resumeText)
     const pdf = await generatePdf(result)
     const ats = await scoreAts(result, pdf)

@@ -1,6 +1,12 @@
 import type { ApiError, CoverLetterOptions, CoverLetterResponse, TailorResponse } from './types'
 
 export const MIN_JD_LENGTH = 100
+export const MAX_JD_LENGTH = 6000
+export const COVER_LETTER_LIMITS = {
+  companyName: 120,
+  roleTitle: 120,
+  candidateNotes: 2000,
+} as const
 export const MAX_FILE_BYTES = 5 * 1024 * 1024
 export const ACCEPTED_EXTENSIONS = ['.pdf', '.docx']
 export const ACCEPTED_MIME_TYPES = [

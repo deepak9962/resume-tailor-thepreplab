@@ -6,6 +6,8 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3001),
   MAX_FILE_SIZE_MB: z.coerce.number().positive().default(5),
   MIN_JD_LENGTH: z.coerce.number().int().positive().default(100),
+  MAX_JD_LENGTH: z.coerce.number().int().positive().default(6_000),
+  MAX_RESUME_TEXT_LENGTH: z.coerce.number().int().positive().default(20_000),
   CORS_ORIGIN: z.string().min(1).default('http://localhost:3000'),
   DOWNLOAD_TTL_MS: z.coerce.number().int().positive().default(300_000),
   GEMINI_MODEL: z.string().min(1).default('gemini-3.5-flash-lite'),

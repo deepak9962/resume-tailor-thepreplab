@@ -6,6 +6,7 @@ import {
   type CoverLetterTone,
 } from '../schemas/coverLetter.js'
 import { ai, withRetry } from './gemini.js'
+import { createFence, UNTRUSTED_RULES, wrapUntrusted } from './promptSafety.js'
 
 export interface CoverLetterContext {
   jobDescription: string
@@ -79,7 +80,9 @@ Return ONLY valid JSON. No markdown fences and no text before or after it. Use e
 }
 
 "signOff" is "Best regards," followed by the candidate's name from the resume, on separate lines.
-Use an empty array for "bullets" only if the resume has too little content, and never invent bullets to fill space.`
+Use an empty array for "bullets" only if the resume has too little content, and never invent bullets to fill space.
+
+${UNTRUSTED_RULES}`
 
 const orNone = (value: string | undefined): string =>
   value && value.trim() !== '' ? value.trim() : '(none provided)'
@@ -87,15 +90,17 @@ const orNone = (value: string | undefined): string =>
 const buildPrompt = (
   { jobDescription, resumeText }: CoverLetterContext,
   { candidateNotes, companyName, roleTitle, tone }: CoverLetterOptions,
-): string =>
-  [
-    `JOB_DESCRIPTION:\n"""\n${jobDescription}\n"""`,
-    `RESUME:\n"""\n${resumeText}\n"""`,
-    `CANDIDATE_NOTES:\n"""\n${orNone(candidateNotes)}\n"""`,
-    `COMPANY_NAME: ${orNone(companyName)}`,
-    `ROLE_TITLE: ${orNone(roleTitle)}`,
+): string => {
+  const fence = createFence()
+  return [
+    wrapUntrusted('JOB_DESCRIPTION', jobDescription, fence),
+    wrapUntrusted('RESUME', resumeText, fence),
+    wrapUntrusted('CANDIDATE_NOTES', orNone(candidateNotes), fence),
+    wrapUntrusted('COMPANY_NAME', orNone(companyName), fence),
+    wrapUntrusted('ROLE_TITLE', orNone(roleTitle), fence),
     `TONE: ${tone ?? 'professional'}`,
   ].join('\n\n')
+}
 
 const isEmptyLetter = (result: CoverLetterResult): boolean =>
   result.coverLetter.opening.trim() === '' && result.coverLetter.closing.trim() === ''

@@ -2,7 +2,7 @@
 
 import { startTransition, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { MIN_JD_LENGTH, tailorResume } from './api'
+import { MAX_JD_LENGTH, MIN_JD_LENGTH, tailorResume } from './api'
 import { ErrorBanner } from './components/ErrorBanner'
 import { FullPageLoader } from './components/FullPageLoader'
 import { JobDescriptionInput } from './components/JobDescriptionInput'
@@ -19,8 +19,12 @@ export const ResumeTailor = () => {
   const [error, setError] = useState<string | null>(null)
 
   const isProcessing = status === 'processing'
+  const jdLength = jobDescription.trim().length
   const canSubmit =
-    !isProcessing && jobDescription.trim().length >= MIN_JD_LENGTH && file !== null
+    !isProcessing &&
+    jdLength >= MIN_JD_LENGTH &&
+    jdLength <= MAX_JD_LENGTH &&
+    file !== null
 
   const handleSubmit = async () => {
     if (!canSubmit || !file) return
