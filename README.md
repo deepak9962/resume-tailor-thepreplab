@@ -103,7 +103,7 @@ Open http://localhost:3000, paste a job description, upload a resume, and submit
 | `MIN_JD_LENGTH`    | no       | `100`                   | Minimum job-description length.                   |
 | `MAX_JD_LENGTH`    | no       | `6000`                  | Maximum job-description length (longer is rejected). |
 | `MAX_RESUME_TEXT_LENGTH` | no | `20000`                 | Extracted resume text is truncated to this.       |
-| `CORS_ORIGIN`      | no       | `http://localhost:3000` | Allowed frontend origin.                          |
+| `CORS_ORIGIN`      | no       | `http://localhost:3000` | Comma-separated allowed frontend origins (local dev + deployed URL). |
 | `DOWNLOAD_TTL_MS`  | no       | `300000`                | Download / context lifetime (5 minutes).          |
 
 **`frontend/.env.local`**

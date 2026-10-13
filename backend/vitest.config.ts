@@ -5,6 +5,7 @@ export default defineConfig({
     environment: 'node',
     env: {
       GEMINI_API_KEY: 'test-key',
+      CORS_ORIGIN: 'http://localhost:3000,https://prod.example.com',
     },
   },
 })

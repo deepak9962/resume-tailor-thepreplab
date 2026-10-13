@@ -20,6 +20,30 @@ describe('server', () => {
     expect(response.json()).toEqual({ status: 'ok' })
   })
 
+  it('allows CORS requests from each configured origin', async () => {
+    const app = await buildServer()
+    apps.push(app)
+
+    for (const origin of ['http://localhost:3000', 'https://prod.example.com']) {
+      const response = await app.inject({ method: 'GET', url: '/health', headers: { origin } })
+      expect(response.statusCode).toBe(200)
+      expect(response.headers['access-control-allow-origin']).toBe(origin)
+    }
+  })
+
+  it('does not allow CORS requests from an unknown origin', async () => {
+    const app = await buildServer()
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/health',
+      headers: { origin: 'https://evil.example.com' },
+    })
+    expect(response.statusCode).toBe(200)
+    expect(response.headers['access-control-allow-origin']).toBeUndefined()
+  })
+
   it('returns 404 for an unknown download token', async () => {
     const app = await buildServer()
     apps.push(app)

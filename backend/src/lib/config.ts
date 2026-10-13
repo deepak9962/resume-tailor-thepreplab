@@ -23,8 +23,13 @@ if (!parsed.success) {
   process.exit(1)
 }
 
+const corsOrigins = parsed.data.CORS_ORIGIN.split(',')
+  .map((origin) => origin.trim())
+  .filter((origin) => origin !== '')
+
 export const config = {
   ...parsed.data,
   maxFileSizeBytes: parsed.data.MAX_FILE_SIZE_MB * 1024 * 1024,
   geminiModel: parsed.data.GEMINI_MODEL,
+  corsOrigins,
 } as const

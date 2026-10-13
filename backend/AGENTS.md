@@ -19,6 +19,8 @@ Scope is intentionally small. Everything here should stay readable by one person
 - `pdfkit` for PDF generation.
 - `zod` for request/response validation.
 
+Deployment note (Render/Railway and similar container hosts): the server binds `host: '0.0.0.0'` and reads `PORT` from the environment (see `server.ts` / `config.ts`); binding to `localhost` would make it unreachable behind the platform proxy. Fastify runs with `trustProxy: true` so rate limiting and `request.ip` use the platform's forwarded client IP.
+
 ## 3. Directory layout
 
 ```
@@ -73,7 +75,7 @@ All config is read once in `src/lib/config.ts` and validated at startup. Never r
 | `MIN_JD_LENGTH`     | no       | `100`   | Minimum characters for a valid JD.      |
 | `MAX_JD_LENGTH`     | no       | `6000`  | Hard cap for the JD; longer is rejected with `400`. |
 | `MAX_RESUME_TEXT_LENGTH` | no  | `20000` | Extracted resume text is truncated to this length (with a logged warning). |
-| `CORS_ORIGIN`       | no       | `http://localhost:3000` | Frontend origin.        |
+| `CORS_ORIGIN`       | no       | `http://localhost:3000` | Comma-separated allowed frontend origins (e.g. local dev + deployed URL). |
 | `DOWNLOAD_TTL_MS`   | no       | `300000`| 5 minutes.                              |
 | `GEMINI_MODEL`      | no       | `gemini-3.8-flash` | Must be a Gemini 3 model (2.5 is limited to legacy users). |
 

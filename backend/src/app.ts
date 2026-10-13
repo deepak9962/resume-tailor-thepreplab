@@ -11,12 +11,13 @@ import { resumeTailorRoutes } from './routes/resumeTailor.js'
 
 export const buildServer = async (): Promise<FastifyInstance> => {
   const app = Fastify({
+    trustProxy: true,
     logger: {
       redact: ['req.headers.authorization', 'req.headers["x-goog-api-key"]'],
     },
   })
 
-  await app.register(cors, { origin: config.CORS_ORIGIN })
+  await app.register(cors, { origin: config.corsOrigins })
   await app.register(rateLimit, { max: 30, timeWindow: '1 minute' })
   await app.register(multipart, {
     limits: {
