@@ -16,6 +16,24 @@ const getApiBaseUrl = (): string => {
   return url.replace(/\/+$/, '')
 }
 
+const REQUEST_TIMEOUT_MS = 180_000
+
+const isAbortError = (error: unknown): boolean =>
+  typeof error === 'object' &&
+  error !== null &&
+  'name' in error &&
+  (error as { name?: unknown }).name === 'AbortError'
+
+const fetchWithTimeout = async (url: string, init: RequestInit): Promise<Response> => {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  try {
+    return await fetch(url, { ...init, signal: controller.signal })
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 const readErrorMessage = async (response: Response): Promise<string> => {
   try {
     const body = (await response.json()) as { error?: ApiError }
@@ -38,11 +56,14 @@ export const tailorResume = async (
 
   let response: Response
   try {
-    response = await fetch(`${getApiBaseUrl()}/resume-tailor`, {
+    response = await fetchWithTimeout(`${getApiBaseUrl()}/resume-tailor`, {
       method: 'POST',
       body: formData,
     })
-  } catch {
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new Error('This is taking longer than expected. Please try again.')
+    }
     throw new Error('Could not reach the tailoring service. Check your connection and try again.')
   }
 
@@ -74,12 +95,15 @@ export const generateCoverLetter = async (
 
   let response: Response
   try {
-    response = await fetch(`${getApiBaseUrl()}/cover-letter`, {
+    response = await fetchWithTimeout(`${getApiBaseUrl()}/cover-letter`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
-  } catch {
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new Error('This is taking longer than expected. Please try again.')
+    }
     throw new Error('Could not reach the cover letter service. Check your connection and try again.')
   }
 

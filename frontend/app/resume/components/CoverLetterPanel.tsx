@@ -4,6 +4,7 @@ import { useRef, useSyncExternalStore, useState } from 'react'
 import { generateCoverLetter } from '@/app/resume-tailor/api'
 import { DownloadButton } from '@/app/resume-tailor/components/DownloadButton'
 import { ErrorBanner } from '@/app/resume-tailor/components/ErrorBanner'
+import { GeneratingFeedback } from '@/app/resume-tailor/components/GeneratingFeedback'
 import {
   getLastCoverLetter,
   getServerLastCoverLetter,
@@ -22,6 +23,13 @@ const TONES: { value: CoverLetterTone; label: string }[] = [
   { value: 'professional', label: 'Professional' },
   { value: 'warm', label: 'Warm' },
   { value: 'direct', label: 'Direct' },
+]
+
+const GENERATING_MESSAGES = [
+  'Reading the job description and your resume…',
+  'Drafting your cover letter…',
+  'Refining the wording and structure…',
+  'The AI is taking longer than usual, so hang tight.',
 ]
 
 const fieldClassName =
@@ -167,30 +175,34 @@ export const CoverLetterPanel = ({ token, resume }: CoverLetterPanelProps) => {
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-5">
-            <button
-              type="button"
-              onClick={handleGenerate}
-              disabled={isGenerating}
-              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300"
-            >
-              {isGenerating ? 'Writing…' : saved ? 'Write again' : 'Write cover letter'}
-            </button>
-            {saved && !isGenerating && (
+          <div className="flex flex-col gap-4 border-t border-slate-100 pt-5">
+            <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
-                onClick={() => setIsEditing(false)}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                onClick={handleGenerate}
+                disabled={isGenerating}
+                className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
-                Cancel
+                {isGenerating ? 'Writing…' : saved ? 'Write again' : 'Write cover letter'}
               </button>
-            )}
-            <span className="text-xs text-slate-500" aria-live="polite">
-              {isGenerating ? 'Writing your cover letter…' : 'One page, tailored to this role.'}
-            </span>
-          </div>
+              {saved && !isGenerating && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                >
+                  Cancel
+                </button>
+              )}
+              {!isGenerating && (
+                <span className="text-xs text-slate-500">One page, tailored to this role.</span>
+              )}
+            </div>
 
-          <div aria-live="polite">{error && <ErrorBanner message={error} />}</div>
+            {isGenerating && <GeneratingFeedback messages={GENERATING_MESSAGES} compact />}
+
+            <div aria-live="polite">{error && <ErrorBanner message={error} />}</div>
+          </div>
         </section>
       )}
 
