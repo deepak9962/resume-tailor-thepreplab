@@ -1,4 +1,4 @@
-import type { ApiError, TailorResponse } from './types'
+import type { ApiError, CoverLetterOptions, CoverLetterResponse, TailorResponse } from './types'
 
 export const MIN_JD_LENGTH = 100
 export const MAX_FILE_BYTES = 5 * 1024 * 1024
@@ -54,3 +54,38 @@ export const tailorResume = async (
 }
 
 export const downloadUrl = (token: string): string => `${getApiBaseUrl()}/download/${token}`
+
+const trimOrUndefined = (value: string | undefined): string | undefined => {
+  const trimmed = value?.trim()
+  return trimmed ? trimmed : undefined
+}
+
+export const generateCoverLetter = async (
+  token: string,
+  options: CoverLetterOptions,
+): Promise<CoverLetterResponse> => {
+  const payload = {
+    token,
+    companyName: trimOrUndefined(options.companyName),
+    roleTitle: trimOrUndefined(options.roleTitle),
+    candidateNotes: trimOrUndefined(options.candidateNotes),
+    tone: options.tone,
+  }
+
+  let response: Response
+  try {
+    response = await fetch(`${getApiBaseUrl()}/cover-letter`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  } catch {
+    throw new Error('Could not reach the cover letter service. Check your connection and try again.')
+  }
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+
+  return (await response.json()) as CoverLetterResponse
+}

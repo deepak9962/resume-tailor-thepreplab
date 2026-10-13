@@ -11,6 +11,8 @@ export class AppError extends Error {
 }
 
 export const badRequest = (message: string) => new AppError(400, 'BAD_REQUEST', message)
+export const notFound = (message: string) => new AppError(404, 'NOT_FOUND', message)
+export const gone = (message: string) => new AppError(410, 'EXPIRED', message)
 export const unsupportedType = (message: string) =>
   new AppError(415, 'UNSUPPORTED_FILE_TYPE', message)
 export const payloadTooLarge = (message: string) =>

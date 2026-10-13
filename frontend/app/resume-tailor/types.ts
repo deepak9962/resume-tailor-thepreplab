@@ -52,6 +52,45 @@ export interface TailorResponse {
   result: TailorResult
 }
 
+export interface CoverLetter {
+  greeting: string
+  opening: string
+  bullets: string[]
+  closing: string
+  signOff: string
+}
+
+export interface CoverLetterEvidence {
+  requirement: string
+  resumeFact: string
+}
+
+export interface CoverLetterAnalysis {
+  jdPriorities: string[]
+  evidenceUsed: CoverLetterEvidence[]
+  unsupportedRequirements: string[]
+}
+
+export interface CoverLetterResult {
+  coverLetter: CoverLetter
+  analysis: CoverLetterAnalysis
+}
+
+export interface CoverLetterResponse {
+  token: string
+  expiresAt: string
+  result: CoverLetterResult
+}
+
+export type CoverLetterTone = 'professional' | 'warm' | 'direct'
+
+export interface CoverLetterOptions {
+  candidateNotes?: string
+  companyName?: string
+  roleTitle?: string
+  tone?: CoverLetterTone
+}
+
 export interface ApiError {
   code: string
   message: string

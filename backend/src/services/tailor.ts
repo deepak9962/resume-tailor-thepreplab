@@ -1,16 +1,11 @@
-import { GoogleGenAI } from '@google/genai'
 import { config } from '../lib/config.js'
-import { badRequest, llmFailure } from '../lib/errors.js'
+import { badRequest } from '../lib/errors.js'
 import {
   tailorResultJsonSchema,
   tailorResultSchema,
   type TailorResult,
 } from '../schemas/tailorResult.js'
-
-const ai = new GoogleGenAI({
-  apiKey: config.GEMINI_API_KEY,
-  httpOptions: { timeout: 60_000 },
-})
+import { ai, withRetry } from './gemini.js'
 
 const SYSTEM_INSTRUCTION = `You are an expert resume editor and technical recruiter. You tailor a candidate's existing resume to a specific job description (JD) so it reads as strongly as possible while staying 100% truthful.
 
@@ -77,23 +72,6 @@ Return ONLY valid JSON. No markdown fences and no text before or after it. The o
 const buildPrompt = (jobDescription: string, resumeText: string): string =>
   `JOB_DESCRIPTION:\n"""\n${jobDescription}\n"""\n\nRESUME:\n"""\n${resumeText}\n"""`
 
-const statusOf = (error: unknown): number | undefined => {
-  if (error && typeof error === 'object' && 'status' in error) {
-    const status = (error as { status?: unknown }).status
-    return typeof status === 'number' ? status : undefined
-  }
-  return undefined
-}
-
-const isTransient = (error: unknown): boolean => {
-  const status = statusOf(error)
-  if (status !== undefined) {
-    return status === 429 || status >= 500
-  }
-  const message = error instanceof Error ? error.message : String(error)
-  return /(5\d\d|timeout|timed out|unavailable|overloaded|rate)/i.test(message)
-}
-
 const isEmptyResume = (result: TailorResult): boolean => {
   const { customizedResume } = result
   return (
@@ -132,22 +110,10 @@ export const tailorResume = async (
     return parsed.data
   }
 
-  let result: TailorResult
-  try {
-    result = await attempt()
-  } catch (firstError) {
-    if (!isTransient(firstError)) {
-      throw llmFailure('The AI service could not tailor the resume. Please try again.', firstError)
-    }
-    try {
-      result = await attempt()
-    } catch (retryError) {
-      throw llmFailure(
-        'The AI service is busy right now. Please try again in a moment.',
-        retryError,
-      )
-    }
-  }
+  const result = await withRetry(attempt, {
+    failure: 'The AI service could not tailor the resume. Please try again.',
+    busy: 'The AI service is busy right now. Please try again in a moment.',
+  })
 
   if (isEmptyResume(result)) {
     throw badRequest('Could not read a valid resume. Please upload a text-based PDF or DOCX.')

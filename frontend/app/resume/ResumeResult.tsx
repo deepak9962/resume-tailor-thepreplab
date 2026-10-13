@@ -1,21 +1,28 @@
 'use client'
 
-import { useSyncExternalStore } from 'react'
+import { useSyncExternalStore, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { DownloadButton } from '@/app/resume-tailor/components/DownloadButton'
 import {
+  clearLastCoverLetter,
   clearLastTailorResult,
   getLastTailorResult,
   getServerLastTailorResult,
   subscribeLastTailorResult,
 } from '@/app/resume-tailor/storage'
+import { CoverLetterPanel } from './components/CoverLetterPanel'
 import { MatchCard } from './components/MatchCard'
 import { ResumePreview } from './components/ResumePreview'
 
 const subscribeNoop = (): (() => void) => () => {}
 const getHydrated = (): boolean => true
 const getServerHydrated = (): boolean => false
+
+const TAB_CLASS = (active: boolean): string =>
+  `rounded-md px-4 py-1.5 text-sm font-medium transition ${
+    active ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+  }`
 
 const EmptyState = () => (
   <div className="mx-auto flex w-full max-w-md flex-col items-center gap-4 rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
@@ -47,6 +54,7 @@ const EmptyState = () => (
 
 export const ResumeResult = () => {
   const router = useRouter()
+  const [view, setView] = useState<'resume' | 'cover-letter'>('resume')
   const hydrated = useSyncExternalStore(subscribeNoop, getHydrated, getServerHydrated)
   const response = useSyncExternalStore(
     subscribeLastTailorResult,
@@ -56,6 +64,7 @@ export const ResumeResult = () => {
 
   const startOver = () => {
     clearLastTailorResult()
+    clearLastCoverLetter()
     router.push('/')
   }
 
@@ -92,12 +101,46 @@ export const ResumeResult = () => {
         {hydrated && !response && <EmptyState />}
 
         {hydrated && response && (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-            <ResumePreview resume={response.result.customizedResume} />
-            <div className="self-start lg:sticky lg:top-24">
-              <MatchCard analysis={response.result.analysis} />
+          <>
+            <div
+              role="tablist"
+              aria-label="Result view"
+              className="mb-6 inline-flex rounded-lg border border-slate-200 bg-white p-1 shadow-sm"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={view === 'resume'}
+                onClick={() => setView('resume')}
+                className={TAB_CLASS(view === 'resume')}
+              >
+                Resume
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={view === 'cover-letter'}
+                onClick={() => setView('cover-letter')}
+                className={TAB_CLASS(view === 'cover-letter')}
+              >
+                Cover letter
+              </button>
             </div>
-          </div>
+
+            {view === 'resume' ? (
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+                <ResumePreview resume={response.result.customizedResume} />
+                <div className="self-start lg:sticky lg:top-24">
+                  <MatchCard analysis={response.result.analysis} />
+                </div>
+              </div>
+            ) : (
+              <CoverLetterPanel
+                token={response.token}
+                resume={response.result.customizedResume}
+              />
+            )}
+          </>
         )}
       </div>
     </main>

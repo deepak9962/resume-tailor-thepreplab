@@ -42,7 +42,11 @@ export const resumeTailorRoutes: FastifyPluginAsync = async (app) => {
     const resumeText = await extractText(resumeBuffer)
     const result = await tailorResume(trimmedJd, resumeText)
     const pdf = await generatePdf(result)
-    const { token, expiresAt } = tokenStore.save(pdf)
+    const { token, expiresAt } = tokenStore.save(pdf, {
+      jobDescription: trimmedJd,
+      resumeText,
+      resume: result.customizedResume,
+    })
 
     return {
       token,

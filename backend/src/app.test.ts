@@ -30,4 +30,35 @@ describe('server', () => {
       error: { code: 'NOT_FOUND', message: 'Download link not found.' },
     })
   })
+
+  it('rejects a cover letter request without a token', async () => {
+    const app = await buildServer()
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/cover-letter',
+      payload: { tone: 'warm' },
+    })
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toMatchObject({ error: { code: 'BAD_REQUEST' } })
+  })
+
+  it('returns 404 for an unknown cover letter token', async () => {
+    const app = await buildServer()
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/cover-letter',
+      payload: { token: 'missing' },
+    })
+    expect(response.statusCode).toBe(404)
+    expect(response.json()).toEqual({
+      error: {
+        code: 'NOT_FOUND',
+        message: 'Tailoring session not found. Please tailor the resume again.',
+      },
+    })
+  })
 })

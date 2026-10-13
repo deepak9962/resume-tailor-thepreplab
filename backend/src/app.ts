@@ -4,6 +4,7 @@ import rateLimit from '@fastify/rate-limit'
 import Fastify, { type FastifyError, type FastifyInstance } from 'fastify'
 import { config } from './lib/config.js'
 import { AppError } from './lib/errors.js'
+import { coverLetterRoutes } from './routes/coverLetter.js'
 import { downloadRoutes } from './routes/download.js'
 import { healthRoutes } from './routes/health.js'
 import { resumeTailorRoutes } from './routes/resumeTailor.js'
@@ -59,6 +60,7 @@ export const buildServer = async (): Promise<FastifyInstance> => {
 
   await app.register(healthRoutes)
   await app.register(resumeTailorRoutes)
+  await app.register(coverLetterRoutes)
   await app.register(downloadRoutes)
 
   return app
