@@ -44,12 +44,29 @@ export interface TailorAnalysis {
 export interface TailorResult {
   customizedResume: CustomizedResume
   analysis: TailorAnalysis
+  ats?: AtsReport
 }
 
 export interface TailorResponse {
   token: string
   expiresAt: string
   result: TailorResult
+}
+
+export type AtsGroup = 'content' | 'pdf'
+
+export interface AtsCheck {
+  id: string
+  group: AtsGroup
+  label: string
+  status: 'pass' | 'fail'
+  weight: number
+  note?: string
+}
+
+export interface AtsReport {
+  score: number
+  checks: AtsCheck[]
 }
 
 export interface CoverLetter {

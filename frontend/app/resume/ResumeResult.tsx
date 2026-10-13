@@ -12,6 +12,7 @@ import {
   subscribeLastTailorResult,
 } from '@/app/resume-tailor/storage'
 import { CoverLetterPanel } from './components/CoverLetterPanel'
+import { AtsCard } from './components/AtsCard'
 import { MatchCard } from './components/MatchCard'
 import { ResumePreview } from './components/ResumePreview'
 
@@ -130,8 +131,9 @@ export const ResumeResult = () => {
             {view === 'resume' ? (
               <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
                 <ResumePreview resume={response.result.customizedResume} />
-                <div className="self-start lg:sticky lg:top-24">
+                <div className="flex flex-col gap-6 self-start lg:sticky lg:top-24">
                   <MatchCard analysis={response.result.analysis} />
+                  {response.result.ats && <AtsCard ats={response.result.ats} />}
                 </div>
               </div>
             ) : (

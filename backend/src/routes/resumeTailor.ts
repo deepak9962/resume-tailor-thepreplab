@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { config } from '../lib/config.js'
 import { badRequest, payloadTooLarge } from '../lib/errors.js'
+import { scoreAts } from '../services/ats.js'
 import { extractText } from '../services/extractText.js'
 import { generatePdf } from '../services/generatePdf.js'
 import { tailorResume } from '../services/tailor.js'
@@ -42,6 +43,7 @@ export const resumeTailorRoutes: FastifyPluginAsync = async (app) => {
     const resumeText = await extractText(resumeBuffer)
     const result = await tailorResume(trimmedJd, resumeText)
     const pdf = await generatePdf(result)
+    const ats = await scoreAts(result, pdf)
     const { token, expiresAt } = tokenStore.save(pdf, {
       jobDescription: trimmedJd,
       resumeText,
@@ -51,7 +53,7 @@ export const resumeTailorRoutes: FastifyPluginAsync = async (app) => {
     return {
       token,
       expiresAt: new Date(expiresAt).toISOString(),
-      result,
+      result: { ...result, ats },
     }
   })
 }

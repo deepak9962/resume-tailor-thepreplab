@@ -1,44 +1,10 @@
 import type { ReactNode } from 'react'
 import type { TailorAnalysis } from '@/app/resume-tailor/types'
+import { ScoreRing } from './ScoreRing'
 
 interface MatchCardProps {
   analysis: TailorAnalysis
 }
-
-const RADIUS = 34
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS
-
-const ScoreRing = ({ score }: { score: number }) => (
-  <div className="relative h-24 w-24 shrink-0">
-    <svg viewBox="0 0 80 80" className="h-24 w-24 -rotate-90">
-      <circle
-        cx="40"
-        cy="40"
-        r={RADIUS}
-        fill="none"
-        strokeWidth="8"
-        className="stroke-slate-200"
-      />
-      <circle
-        cx="40"
-        cy="40"
-        r={RADIUS}
-        fill="none"
-        strokeWidth="8"
-        strokeLinecap="round"
-        strokeDasharray={CIRCUMFERENCE}
-        strokeDashoffset={CIRCUMFERENCE * (1 - score / 100)}
-        className="stroke-[#1F3864] transition-[stroke-dashoffset] duration-700"
-      />
-    </svg>
-    <div className="absolute inset-0 flex flex-col items-center justify-center">
-      <span className="text-2xl font-bold text-slate-900">{score}</span>
-      <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
-        match
-      </span>
-    </div>
-  </div>
-)
 
 const Chip = ({ label, tone }: { label: string; tone: 'matched' | 'missing' }) => (
   <span
@@ -62,12 +28,10 @@ const Group = ({ title, children }: { title: string; children: ReactNode }) => (
 )
 
 export const MatchCard = ({ analysis }: MatchCardProps) => {
-  const score = Math.max(0, Math.min(100, Math.round(analysis.matchScore)))
-
   return (
     <aside className="flex flex-col gap-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex items-center gap-5">
-        <ScoreRing score={score} />
+        <ScoreRing score={analysis.matchScore} label="match" />
         <div className="flex flex-col gap-1">
           <h2 className="text-sm font-semibold text-slate-900">Overall match</h2>
           <p className="text-xs leading-relaxed text-slate-600">
